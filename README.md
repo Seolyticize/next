@@ -26,5 +26,5 @@ The site key and IndexNow key come from `onboard_site` (https://seolyticize.com/
 ## Install
 
 ```sh
-npm install github:Seolyticize/next
+npm install @seolyticize/next
 ```

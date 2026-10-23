@@ -1,0 +1,46 @@
+{
+  "name": "@seolyticize/next",
+  "version": "0.1.0",
+  "description": "Seolyticize for Next.js and other React frameworks: the analytics tag, the IndexNow key route, and deploy notification.",
+  "type": "module",
+  "license": "MIT",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "bin": {
+    "seolyticize-notify-deploy": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "peerDependencies": {
+    "react": ">=18"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "prepare": "npm run build"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "@types/node": "^22.18.13",
+    "react": "^19.2.0",
+    "@types/react": "^19.2.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Seolyticize/next.git"
+  },
+  "homepage": "https://github.com/Seolyticize/next#readme",
+  "bugs": {
+    "url": "https://github.com/Seolyticize/next/issues"
+  }
+}

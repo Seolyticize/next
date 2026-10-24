@@ -1,7 +1,7 @@
 {
   "name": "@seolyticize/next",
-  "version": "0.1.0",
-  "description": "Seolyticize for Next.js and other React frameworks: the analytics tag, the IndexNow key route, and deploy notification.",
+  "version": "0.2.0",
+  "description": "Seolyticize for Next.js, React frameworks and any Node server: the analytics tag, server-side collection, the IndexNow key route, and deploy notification.",
   "type": "module",
   "license": "MIT",
   "main": "./dist/index.js",
@@ -10,6 +10,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./server": {
+      "types": "./dist/server.d.ts",
+      "default": "./dist/server.js"
     }
   },
   "bin": {

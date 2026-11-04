@@ -9,6 +9,33 @@ import { Analytics } from "@seolyticize/next";
 <Analytics siteKey="…" exclude={["/app/*", "/verify", "/reset"]} />;
 ```
 
+**What it stores:** nothing. No cookies, no localStorage, sessionStorage or
+IndexedDB, no identifier on the device; a visitor is a daily-salted hash
+counted on the server, and Do Not Track and Global Privacy Control are honoured.
+A consent manager can list it as cookieless. The same facts, keyless, are at
+https://seolyticize.com/.well-known/seolyticize-embed.json.
+
+**Consent**, with any banner:
+
+```tsx
+<Analytics siteKey="…" consent="gcm" />       // follows Google Consent Mode's analytics_storage
+<Analytics siteKey="…" consent="required" />  // waits for window.seolyticize("consent", true)
+<Analytics siteKey="…" consent={granted} />   // the page already knows: false renders nothing
+```
+
+`consent="gcm"` works with every banner that sends Google Consent Mode
+(`consentType` follows another storage type). Otherwise call
+`seolyticize("consent", true)` / `false` from the banner's own callback.
+Custom events: `window.seolyticize("Signup", { plan: "free" })`.
+
+**CSP:** `nonce={nonce}` puts the nonce on the tag, and the origins come as constants:
+
+```ts
+import { csp } from "@seolyticize/next";
+// csp.tag:        { "script-src": ["https://seolyticize.com"], "connect-src": ["https://seolyticize.com"] }
+// csp.beaconOnly: { "connect-src": ["https://seolyticize.com"] } — events posted from your own code
+```
+
 ```ts
 // app/<your IndexNow key>.txt/route.ts
 import { indexNowKeyRoute } from "@seolyticize/next";
@@ -18,8 +45,27 @@ export const { GET } = indexNowKeyRoute("<your IndexNow key>");
 ```jsonc
 // package.json — tell search engines after every deploy
 "scripts": { "postbuild": "seolyticize-notify-deploy" }
-// with SEOLYTICIZE_DEPLOY_HOOK set to the URL from create_deploy_hook
+// with SEOLYTICIZE_DEPLOY_HOOK (or SEOLYTICIZE_DEPLOY_HOOK_URL) set to the URL from create_deploy_hook
 ```
+
+`seolyticize-notify-deploy --strict --source=deploy` sends the same request as
+`create_deploy_hook`'s `howToCall`: `?strict=1&source=deploy&ref=<commit>`, with
+`--ref` defaulting to `SOURCE_COMMIT` or `GIT_COMMIT`. A busy hook (503) is
+retried once after its `Retry-After`.
+
+The answer says what it compared by: `lastmod`, or `new_urls_only` when the
+sitemap has no `<lastmod>` (then only new pages are found). `--verbose` lists
+the URLs compared and those found changed.
+
+```sh
+# fail a CI step when verify_site has a failed item
+SEOLYTICIZE_API_KEY=… npx seolyticize-verify --site example.com
+```
+
+`seolyticize-verify` prints one line per item not done (its code and the fix)
+and exits 10 when any item failed, the same code as `seolyticize verify` in
+`@seolyticize/cli` (where 1 means an unexpected error). Without a key, or when Seolyticize cannot be
+reached, it says so and exits 0.
 
 The site key and IndexNow key come from `onboard_site` (https://seolyticize.com/AGENTS.md).
 

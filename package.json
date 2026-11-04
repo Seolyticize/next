@@ -1,6 +1,6 @@
 {
   "name": "@seolyticize/next",
-  "version": "0.2.0",
+  "version": "0.3.2",
   "description": "Seolyticize for Next.js, React frameworks and any Node server: the analytics tag, server-side collection, the IndexNow key route, and deploy notification.",
   "type": "module",
   "license": "MIT",
@@ -17,7 +17,8 @@
     }
   },
   "bin": {
-    "seolyticize-notify-deploy": "./dist/cli.js"
+    "seolyticize-notify-deploy": "./dist/cli.js",
+    "seolyticize-verify": "./dist/verifyCli.js"
   },
   "files": [
     "dist",

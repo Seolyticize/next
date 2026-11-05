@@ -45,7 +45,9 @@ export type AnalyticsProps = {
    * - true / false: the page already knows; false renders nothing.
    * - left out or "none": always sends.
    */
-  consent?: boolean | "gcm" | "required" | "none";
+  consent?: boolean | "gcm" | "banner-gated" | "required" | "none";
+  /** With consent="gcm": says on the browser console why the tag is not sending. */
+  debug?: boolean;
   /** The Consent Mode storage type to follow with consent="gcm" (default analytics_storage). */
   consentType?: string;
   /** A CSP nonce, put on the script tag. */
@@ -65,16 +67,19 @@ export function Analytics({
   baseUrl = DEFAULT_BASE_URL,
   consent,
   consentType,
+  debug,
   nonce,
 }: AnalyticsProps): ReactElement | null {
   if (consent === false) return null;
-  const waits = consent === "required" || consent === "gcm";
+  const gated = consent === "gcm" || consent === "banner-gated";
+  const waits = consent === "required" || gated;
   return createElement("script", {
     defer: true,
     src: `${baseUrl.replace(/\/$/, "")}/a.js`,
     "data-site": siteKey,
     ...(waits ? { "data-consent": consent } : {}),
-    ...(consent === "gcm" && consentType ? { "data-consent-type": consentType } : {}),
+    ...(gated && consentType ? { "data-consent-type": consentType } : {}),
+    ...(gated && debug ? { "data-debug": "" } : {}),
     ...(nonce ? { nonce } : {}),
     ...(exclude?.length ? { "data-exclude": exclude.join(",") } : {}),
     ...(include?.length ? { "data-include": include.join(",") } : {}),
@@ -118,13 +123,16 @@ export type DeployNotification = {
 
 /**
  * Tells Seolyticize a deploy finished, so the new and changed pages go to
- * IndexNow. hookUrl is what create_deploy_hook returned. With urls, exactly
- * those are submitted; without, the sitemap is compared with the last deploy.
+ * IndexNow. hookUrl is the url create_deploy_hook returned, with its secret in
+ * options.secret (or its webhookUrl, which holds the secret, alone). With urls,
+ * exactly those are submitted; without, the sitemap is compared with the last deploy.
  */
 export async function notifyDeploy(
   hookUrl: string,
   options: {
     urls?: string[];
+    /** The hook's secret, sent in a header so it stays out of every URL. */
+    secret?: string;
     verbose?: boolean;
     /** The same query create_deploy_hook's howToCall sends: strict=1, source, ref. */
     strict?: boolean;
@@ -148,7 +156,10 @@ export async function notifyDeploy(
   const send = () =>
     (options.fetchImpl ?? fetch)(target, {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: {
+        "content-type": "application/json",
+        ...(options.secret ? { authorization: `Bearer ${options.secret}` } : {}),
+      },
       body: JSON.stringify(options.urls ? { urls: options.urls } : {}),
     });
   let response = await send();

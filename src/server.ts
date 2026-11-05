@@ -229,9 +229,12 @@ export type LaterEvent = {
   url?: string | undefined;
 };
 
+/** What became of one report; dropped is the collector's reason (X-Seolyticize-Dropped). */
+export type TrackResult = { accepted: boolean; dropped?: string };
+
 export type Collector = {
   /** Reports one page view (or event). Resolves when sent, never rejects. */
-  track(view: PageView): Promise<void>;
+  track(view: PageView): Promise<TrackResult>;
   /**
    * Reports an event for the visitor in front of you — a sign-up, a checkout
    * started — whatever `only` says, and resolves with that visit's token, or
@@ -269,7 +272,11 @@ export function createCollector(options: CollectorOptions): Collector {
   function bodyFor(view: PageView, everyone: boolean): Record<string, unknown> | null {
     const page = new URL(view.url);
     if (!reports(page.pathname)) return null;
-    const kind = classifyAgent(view.userAgent ?? "", view.signatureAgent);
+    // No user agent given: the site's own server reporting an event, not a bot.
+    const kind =
+      view.userAgent === undefined
+        ? "person"
+        : classifyAgent(view.userAgent ?? "", view.signatureAgent);
     if (kind === "bot") return null;
     if (!everyone && options.only === "agents" && kind !== "agent") return null;
 
@@ -312,12 +319,18 @@ export function createCollector(options: CollectorOptions): Collector {
     }
   }
 
-  async function track(view: PageView): Promise<void> {
+  async function track(view: PageView): Promise<TrackResult> {
     try {
       const body = bodyFor(view, false);
-      if (body) await send(body);
+      if (!body) return { accepted: false, dropped: "not_reported" };
+      const response = await send(body);
+      const dropped = response.headers.get("x-seolyticize-dropped");
+      return dropped
+        ? { accepted: false, dropped }
+        : { accepted: response.status === 202 };
     } catch (error) {
       options.onError?.(error);
+      return { accepted: false };
     }
   }
 

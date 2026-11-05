@@ -15,16 +15,18 @@ counted on the server, and Do Not Track and Global Privacy Control are honoured.
 A consent manager can list it as cookieless. The same facts, keyless, are at
 https://seolyticize.com/.well-known/seolyticize-embed.json.
 
-**Consent**, with any banner:
+**Consent.** The tag sets nothing on the device and sends from the first page;
+whether your site needs consent for it is your call. Gating it is an extra you
+choose, and counts then start only after a grant:
 
 ```tsx
-<Analytics siteKey="…" consent="gcm" />       // follows Google Consent Mode's analytics_storage
+<Analytics siteKey="…" consent="banner-gated" />  // or "gcm": follows Google Consent Mode's analytics_storage
 <Analytics siteKey="…" consent="required" />  // waits for window.seolyticize("consent", true)
 <Analytics siteKey="…" consent={granted} />   // the page already knows: false renders nothing
 ```
 
-`consent="gcm"` works with every banner that sends Google Consent Mode
-(`consentType` follows another storage type). Otherwise call
+`consent="banner-gated"` works with every banner that sends Google Consent Mode
+(`consentType` follows another storage type; `debug` says on the console why the tag is not sending). Otherwise call
 `seolyticize("consent", true)` / `false` from the banner's own callback.
 Custom events: `window.seolyticize("Signup", { plan: "free" })`.
 
@@ -45,13 +47,14 @@ export const { GET } = indexNowKeyRoute("<your IndexNow key>");
 ```jsonc
 // package.json — tell search engines after every deploy
 "scripts": { "postbuild": "seolyticize-notify-deploy" }
-// with SEOLYTICIZE_DEPLOY_HOOK (or SEOLYTICIZE_DEPLOY_HOOK_URL) set to the URL from create_deploy_hook
+// with SEOLYTICIZE_DEPLOY_HOOK_ID and SEOLYTICIZE_DEPLOY_HOOK_SECRET from create_deploy_hook
+// (or SEOLYTICIZE_DEPLOY_HOOK_URL set to a URL that holds its secret)
 ```
 
 `seolyticize-notify-deploy --strict --source=deploy` sends the same request as
 `create_deploy_hook`'s `howToCall`: `?strict=1&source=deploy&ref=<commit>`, with
 `--ref` defaulting to `SOURCE_COMMIT` or `GIT_COMMIT`. A busy hook (503) is
-retried once after its `Retry-After`.
+retried once after its `Retry-After`. It never prints the id, URL or secret.
 
 The answer says what it compared by: `lastmod`, or `new_urls_only` when the
 sitemap has no `<lastmod>` (then only new pages are found). `--verbose` lists

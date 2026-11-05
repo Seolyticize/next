@@ -1,17 +1,21 @@
 "use client";
 import { useEffect, useState } from "react";
 
-type Tag = ((command: "visit") => Promise<string | null> | null) & { q?: unknown };
+type Tag = ((command: "visit") => Promise<string | null> | null) & {
+  q?: unknown;
+  v?: number;
+};
 
 /**
  * This visit's token from the analytics tag, or null while there is none: no
  * consent, Do Not Track or Global Privacy Control, an excluded path, or the tag
- * not loaded. Null again from the page's stub, which only queues.
+ * not loaded. Null again from the page's stub, which only queues, and from a
+ * tag too old to know "visit" (no v), which would send it as an event.
  */
 export async function currentVisit(
   tag: unknown = (globalThis as { seolyticize?: unknown }).seolyticize,
 ): Promise<string | null> {
-  if (typeof tag !== "function" || (tag as Tag).q) return null;
+  if (typeof tag !== "function" || (tag as Tag).q || !(tag as Tag).v) return null;
   return (await (tag as Tag)("visit")) ?? null;
 }
 

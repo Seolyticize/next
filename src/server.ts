@@ -274,7 +274,7 @@ export function createCollector(options: CollectorOptions): Collector {
     if (!reports(page.pathname)) return null;
     // No user agent given: the site's own server reporting an event, not a bot.
     const kind =
-      view.userAgent === undefined
+      view.userAgent === undefined || view.userAgent === ""
         ? "person"
         : classifyAgent(view.userAgent ?? "", view.signatureAgent);
     if (kind === "bot") return null;
@@ -319,15 +319,30 @@ export function createCollector(options: CollectorOptions): Collector {
     }
   }
 
+  /** Why an answer other than 202 came back, for onError. */
+  const refused = (status: number) =>
+    new Error(
+      status === 404
+        ? `Seolyticize has no site with the key ${options.siteKey}.`
+        : `Seolyticize answered HTTP ${status}.`,
+    );
+
   async function track(view: PageView): Promise<TrackResult> {
     try {
       const body = bodyFor(view, false);
       if (!body) return { accepted: false, dropped: "not_reported" };
       const response = await send(body);
       const dropped = response.headers.get("x-seolyticize-dropped");
-      return dropped
-        ? { accepted: false, dropped }
-        : { accepted: response.status === 202 };
+      if (dropped) {
+        // The visitor's choice or the site's own settings are not faults.
+        if (!/^(gpc|excluded_|outside_)/.test(dropped)) {
+          options.onError?.(new Error(`Seolyticize dropped the event: ${dropped}.`));
+        }
+        return { accepted: false, dropped };
+      }
+      if (response.status === 202) return { accepted: true };
+      options.onError?.(refused(response.status));
+      return { accepted: false };
     } catch (error) {
       options.onError?.(error);
       return { accepted: false };
@@ -341,7 +356,10 @@ export function createCollector(options: CollectorOptions): Collector {
       const body = bodyFor(view, true);
       if (!body) return null;
       const response = await send(body);
-      if (response.status !== 202) return null;
+      if (response.status !== 202) {
+        options.onError?.(refused(response.status));
+        return null;
+      }
       const answer = (await response.json().catch(() => null)) as {
         visit?: unknown;
       } | null;
@@ -382,7 +400,8 @@ export function createCollector(options: CollectorOptions): Collector {
       await track({
         url: request.url,
         referrer: request.headers.get("referer"),
-        userAgent: request.headers.get("user-agent"),
+        // An empty header is still a request with no browser named, not a server event.
+        userAgent: request.headers.get("user-agent") || null,
         ip: addressFrom(request.headers),
         country: request.headers.get("cf-ipcountry"),
         clientHints: request.headers.get("sec-ch-ua"),
@@ -436,7 +455,7 @@ export function expressCollector(
         void collector.track({
           url: `${scheme}://${host.split(",")[0]!.trim()}${req.originalUrl ?? req.url ?? "/"}`,
           referrer: headers.get("referer"),
-          userAgent: headers.get("user-agent"),
+          userAgent: headers.get("user-agent") || null,
           ip:
             (options.trustProxy === false ? undefined : addressFrom(headers)) ??
             req.ip ??

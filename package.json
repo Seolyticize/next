@@ -1,6 +1,6 @@
 {
   "name": "@seolyticize/next",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Seolyticize for Next.js, React frameworks and any Node server: the analytics tag, server-side collection, the IndexNow key route, and deploy notification.",
   "type": "module",
   "license": "MIT",

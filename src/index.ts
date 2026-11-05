@@ -54,6 +54,9 @@ export type AnalyticsProps = {
   nonce?: string;
 };
 
+/** Which a.js this package needs: a separate cache entry, so a new prop never waits on a CDN. Raise it when the tag gains a feature. */
+const TAG_VERSION = "2";
+
 /**
  * The analytics tag. Put it once in the root layout (App Router:
  * app/layout.tsx; Pages Router: pages/_app.tsx). Cookieless; sends no query
@@ -75,7 +78,7 @@ export function Analytics({
   const waits = consent === "required" || gated;
   return createElement("script", {
     defer: true,
-    src: `${baseUrl.replace(/\/$/, "")}/a.js`,
+    src: `${baseUrl.replace(/\/$/, "")}/a.js?v=${TAG_VERSION}`,
     "data-site": siteKey,
     ...(waits ? { "data-consent": consent } : {}),
     ...(gated && consentType ? { "data-consent-type": consentType } : {}),

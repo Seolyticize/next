@@ -25,6 +25,7 @@
  * with the account or order (never in a cookie or a page), and trackLater()
  * sends the later event with it.
  */
+import { CLIENT } from "./version.js";
 
 export const DEFAULT_COLLECT_URL = "https://seolyticize.com/api/collect";
 
@@ -306,6 +307,7 @@ export function createCollector(options: CollectorOptions): Collector {
         headers: {
           "content-type": "application/json",
           authorization: `Bearer ${options.serverKey}`,
+          "x-seolyticize-client": CLIENT,
         },
         body: JSON.stringify(body),
         signal: controller.signal,

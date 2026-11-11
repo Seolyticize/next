@@ -1,4 +1,7 @@
 import { createElement, type ReactElement } from "react";
+import { CLIENT } from "./version.js";
+
+export { CLIENT };
 
 /**
  * Seolyticize in a React app, in three exports.
@@ -54,7 +57,7 @@ export type AnalyticsProps = {
   nonce?: string;
 };
 
-/** Which a.js this package needs: a separate cache entry, so a new prop never waits on a CDN. Raise it when the tag gains a feature. */
+/** Only a cache key: /a.js refreshes itself in minutes, so this never needs raising. */
 const TAG_VERSION = "2";
 
 /**
@@ -80,6 +83,7 @@ export function Analytics({
     defer: true,
     src: `${baseUrl.replace(/\/$/, "")}/a.js?v=${TAG_VERSION}`,
     "data-site": siteKey,
+    "data-client": CLIENT,
     ...(waits ? { "data-consent": consent } : {}),
     ...(gated && consentType ? { "data-consent-type": consentType } : {}),
     ...(gated && debug ? { "data-debug": "" } : {}),
@@ -161,6 +165,7 @@ export async function notifyDeploy(
       method: "POST",
       headers: {
         "content-type": "application/json",
+        "x-seolyticize-client": CLIENT,
         ...(options.secret ? { authorization: `Bearer ${options.secret}` } : {}),
       },
       body: JSON.stringify(options.urls ? { urls: options.urls } : {}),
@@ -177,6 +182,54 @@ export async function notifyDeploy(
     throw new Error(body.error ?? `The deploy hook answered ${response.status}.`);
   }
   return body;
+}
+
+/**
+ * Waits until `url` answers 200 (and, with `header`, carries that header with
+ * that value, such as the version just deployed), polling every few seconds up
+ * to `timeoutMs`. A deploy script calls it before notifyDeploy, so IndexNow is
+ * not told about pages the old version still serves.
+ */
+export async function waitForLive(
+  url: string,
+  options: {
+    header?: { name: string; value: string };
+    timeoutMs?: number;
+    intervalMs?: number;
+    fetchImpl?: typeof fetch;
+    sleep?: (ms: number) => Promise<void>;
+    now?: () => number;
+  } = {},
+): Promise<{ live: boolean; attempts: number; last: string }> {
+  const now = options.now ?? Date.now;
+  const sleep =
+    options.sleep ?? ((ms: number) => new Promise((done) => setTimeout(done, ms)));
+  const deadline = now() + (options.timeoutMs ?? 300_000);
+  let attempts = 0;
+  let last = "no answer";
+  for (;;) {
+    attempts += 1;
+    try {
+      const response = await (options.fetchImpl ?? fetch)(url, {
+        // Past a CDN's copy of the old version.
+        headers: { "cache-control": "no-cache" },
+        signal: AbortSignal.timeout(10_000),
+      });
+      await response.body?.cancel();
+      const seen = options.header ? response.headers.get(options.header.name) : null;
+      if (response.status === 200 && (!options.header || seen === options.header.value)) {
+        return { live: true, attempts, last: "200" };
+      }
+      last =
+        response.status === 200
+          ? `${options.header!.name}: ${seen ?? "(none)"}`
+          : String(response.status);
+    } catch (error) {
+      last = error instanceof Error ? error.name : "error";
+    }
+    if (now() >= deadline) return { live: false, attempts, last };
+    await sleep(options.intervalMs ?? 5_000);
+  }
 }
 
 export type SiteCheck = {
@@ -210,6 +263,7 @@ export async function verifySite(options: {
       headers: {
         authorization: `Bearer ${options.apiKey}`,
         "content-type": "application/json",
+        "x-seolyticize-client": CLIENT,
       },
       body: JSON.stringify(input),
     });

@@ -13,7 +13,17 @@ import { Analytics } from "@seolyticize/next";
 IndexedDB, no identifier on the device; a visitor is a daily-salted hash
 counted on the server, and Do Not Track and Global Privacy Control are honoured.
 A consent manager can list it as cookieless. The same facts, keyless, are at
-https://seolyticize.com/.well-known/seolyticize-embed.json.
+https://seolyticize.com/.well-known/seolyticize-embed.json, and what a privacy
+notice needs (retention, hosting, sub-processors) at
+https://seolyticize.com/.well-known/processor.json.
+
+`siteKey` is the public key from `get_web_analytics_setup` (the tag's
+`data-site-key`), not the internal `site_…` id in crawl ids.
+
+**Version.** Every request (the tag, the server collector, the deploy bin) names
+this package and version (`X-Seolyticize-Client: next/0.4.2`, or `data-client`
+on the tag), so `get_next_steps` shows an `upgrade_client` row when an older
+install is still reporting.
 
 **Consent.** The tag sets nothing on the device and sends from the first page;
 whether your site needs consent for it is your call. Gating it is an extra you
@@ -44,17 +54,32 @@ import { indexNowKeyRoute } from "@seolyticize/next";
 export const { GET } = indexNowKeyRoute("<your IndexNow key>");
 ```
 
-```jsonc
-// package.json — tell search engines after every deploy
-"scripts": { "postbuild": "seolyticize-notify-deploy" }
-// with SEOLYTICIZE_DEPLOY_HOOK_ID and SEOLYTICIZE_DEPLOY_HOOK_SECRET from create_deploy_hook
-// (or SEOLYTICIZE_DEPLOY_HOOK_URL set to a URL that holds its secret)
-```
+Tell search engines after every deploy with `seolyticize-notify-deploy`, with
+`SEOLYTICIZE_DEPLOY_HOOK_ID` and `SEOLYTICIZE_DEPLOY_HOOK_SECRET` from
+`create_deploy_hook` (or `SEOLYTICIZE_DEPLOY_HOOK_URL` set to a URL that holds
+its secret). Call it after the new version serves, not before: IndexNow fetches
+the pages as soon as they are submitted, and would read the old ones. Where
+that is depends on how you ship:
+
+| How you ship                             | Where the call goes                                                                                                                                           |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Git build on Coolify                     | Configuration → Post-deployment command (`get_deploy_hook`'s `howToCall.coolify`).                                                                            |
+| A prebuilt image, rolled out by a script | The deploy script, after the rollout: `npx seolyticize-notify-deploy --wait-for https://example.com/ --wait-header x-version=$TAG --source=deploy --ref=$TAG` |
+| GitHub Actions                           | A step after the deploy step, `if: success()`.                                                                                                                |
+| Vercel                                   | Not `postbuild` (Vercel builds before it serves): a Vercel webhook on `deployment.succeeded`, or a GitHub Actions job on `deployment_status`.                 |
+| `next build && next start` on one host   | `"postbuild"` is too early; call it after the server restarts.                                                                                                |
+
+`--ref` is free text: a tag, a commit or a build number, up to 100 characters.
+`--wait-for <url>` polls that page every 5 s until it answers 200 (and, with
+`--wait-header name=value`, until that header has that value, such as a version
+header the new build sets), for up to `--wait-timeout <seconds>` (default 300),
+then calls the hook; if the page never gets there, it skips the call and says so.
 
 `seolyticize-notify-deploy --strict --source=deploy` sends the same request as
 `create_deploy_hook`'s `howToCall`: `?strict=1&source=deploy&ref=<commit>`, with
 `--ref` defaulting to `SOURCE_COMMIT` or `GIT_COMMIT`. A busy hook (503) is
 retried once after its `Retry-After`. It never prints the id, URL or secret.
+`waitForLive(url, {header})` and `notifyDeploy(hookUrl, {...})` do the same from code.
 
 The answer says what it compared by: `lastmod`, or `new_urls_only` when the
 sitemap has no `<lastmod>` (then only new pages are found). `--verbose` lists

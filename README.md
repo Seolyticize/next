@@ -21,7 +21,7 @@ https://seolyticize.com/.well-known/processor.json.
 `data-site-key`), not the internal `site_…` id in crawl ids.
 
 **Version.** Every request (the tag, the server collector, the deploy bin) names
-this package and version (`X-Seolyticize-Client: next/0.4.2`, or `data-client`
+this package and version (`X-Seolyticize-Client: next/0.4.3`, or `data-client`
 on the tag), so `get_next_steps` shows an `upgrade_client` row when an older
 install is still reporting.
 

@@ -82,7 +82,7 @@ export function Analytics({
   return createElement("script", {
     defer: true,
     src: `${baseUrl.replace(/\/$/, "")}/a.js?v=${TAG_VERSION}`,
-    "data-site": siteKey,
+    "data-site-key": siteKey,
     "data-client": CLIENT,
     ...(waits ? { "data-consent": consent } : {}),
     ...(gated && consentType ? { "data-consent-type": consentType } : {}),
@@ -168,7 +168,7 @@ export async function notifyDeploy(
         "x-seolyticize-client": CLIENT,
         ...(options.secret ? { authorization: `Bearer ${options.secret}` } : {}),
       },
-      body: JSON.stringify(options.urls ? { urls: options.urls } : {}),
+      body: JSON.stringify(options.urls?.length ? { urls: options.urls } : {}),
     });
   let response = await send();
   // One retry when the hook is busy, after the wait it asks for (capped at two minutes).

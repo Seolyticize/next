@@ -21,7 +21,7 @@ https://seolyticize.com/.well-known/processor.json.
 `data-site-key`), not the internal `site_…` id in crawl ids.
 
 **Version.** Every request (the tag, the server collector, the deploy bin) names
-this package and version (`X-Seolyticize-Client: next/0.4.3`, or `data-client`
+this package and version (`X-Seolyticize-Client: next/0.4.4`, or `data-client`
 on the tag), so `get_next_steps` shows an `upgrade_client` row when an older
 install is still reporting.
 
@@ -118,7 +118,7 @@ import { collectInMiddleware, createCollector } from "@seolyticize/next/server";
 
 const collector = createCollector({
   siteKey: "…",
-  serverKey: process.env.SEOLYTICIZE_SERVER_KEY!,
+  serverKey: process.env.SEOLYTICIZE_SERVER_COLLECT_KEY!,
   // With the <Analytics /> tag installed too, report only what the tag cannot
   // see, or every person is counted twice.
   only: "agents",
@@ -135,7 +135,7 @@ export function middleware(request: NextRequest, event: NextFetchEvent) {
 import { createCollector, expressCollector } from "@seolyticize/next/server";
 app.use(
   expressCollector(
-    createCollector({ siteKey: "…", serverKey: process.env.SEOLYTICIZE_SERVER_KEY! }),
+    createCollector({ siteKey: "…", serverKey: process.env.SEOLYTICIZE_SERVER_COLLECT_KEY! }),
   ),
 );
 ```

@@ -476,7 +476,7 @@ export function expressCollector(
  * Next.js middleware (middleware.ts), or any edge function with waitUntil.
  * The report is handed to waitUntil so the page is never held up for it.
  *
- *   const collector = createCollector({ siteKey, serverKey: process.env.SEOLYTICIZE_SERVER_KEY!, only: "agents" });
+ *   const collector = createCollector({ siteKey, serverKey: process.env.SEOLYTICIZE_SERVER_COLLECT_KEY!, only: "agents" });
  *   export function middleware(request: NextRequest, event: NextFetchEvent) {
  *     collectInMiddleware(collector, request, event);
  *   }

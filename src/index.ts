@@ -76,7 +76,8 @@ export function Analytics({
   debug,
   nonce,
 }: AnalyticsProps): ReactElement | null {
-  if (consent === false) return null;
+  // No key (an env var the build did not see) loads nothing, rather than a tag that sends nothing.
+  if (consent === false || !siteKey) return null;
   const gated = consent === "gcm" || consent === "banner-gated";
   const waits = consent === "required" || gated;
   return createElement("script", {

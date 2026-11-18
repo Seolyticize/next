@@ -87,13 +87,16 @@ export function Analytics({
     "data-client": CLIENT,
     ...(waits ? { "data-consent": consent } : {}),
     ...(gated && consentType ? { "data-consent-type": consentType } : {}),
-    ...(gated && debug ? { "data-debug": "" } : {}),
+    ...(debug ? { "data-debug": "" } : {}),
     ...(nonce ? { nonce } : {}),
     ...(exclude?.length ? { "data-exclude": exclude.join(",") } : {}),
     ...(include?.length ? { "data-include": include.join(",") } : {}),
     ...(track?.length ? { "data-track": track.join(" ") } : {}),
   });
 }
+
+/** Analytics under a name that will not collide with an app's own <Analytics>. */
+export const SeolyticizeAnalytics = Analytics;
 
 /**
  * Serves the IndexNow key file. In Next's App Router, put this in

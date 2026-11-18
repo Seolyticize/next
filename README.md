@@ -62,7 +62,7 @@ Tell search engines after every deploy with `seolyticize-notify-deploy`, with
 `SEOLYTICIZE_DEPLOY_HOOK_ID` and `SEOLYTICIZE_DEPLOY_HOOK_SECRET` from
 `create_deploy_hook` (or `SEOLYTICIZE_DEPLOY_HOOK_URL` set to a URL that holds
 its secret). Where `@seolyticize/next` is not installed (a build host, a deploy script),
-name the package: `npx -y -p @seolyticize/next@0.4.6 seolyticize-notify-deploy`;
+name the package: `npx -y -p @seolyticize/next@0.4.7 seolyticize-notify-deploy`;
 a bare `npx seolyticize-notify-deploy` looks for a package of that name and fails.
 Call it after the new version serves, not before: IndexNow fetches
 the pages as soon as they are submitted, and would read the old ones. Where
@@ -71,7 +71,7 @@ that is depends on how you ship:
 | How you ship                             | Where the call goes                                                                                                                                                                         |
 | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Git build on Coolify                     | Configuration → Post-deployment command (`get_deploy_hook`'s `howToCall.coolify`).                                                                                                          |
-| A prebuilt image, rolled out by a script | The deploy script, after the rollout: `npx -y -p @seolyticize/next@0.4.6 seolyticize-notify-deploy --wait-for https://example.com/ --wait-header x-version=$TAG --source=deploy --ref=$TAG` |
+| A prebuilt image, rolled out by a script | The deploy script, after the rollout: `npx -y -p @seolyticize/next@0.4.7 seolyticize-notify-deploy --wait-for https://example.com/ --wait-header x-version=$TAG --source=deploy --ref=$TAG` |
 | GitHub Actions                           | A step after the deploy step, `if: success()`.                                                                                                                                              |
 | Vercel                                   | Not `postbuild` (Vercel builds before it serves): a Vercel webhook on `deployment.succeeded`, or a GitHub Actions job on `deployment_status`.                                               |
 | `next build && next start` on one host   | `"postbuild"` is too early; call it after the server restarts.                                                                                                                              |

@@ -189,6 +189,24 @@ export async function notifyDeploy(
 }
 
 /**
+ * Pages that changed between deploys, such as listings that sold: sends
+ * `changed` and `removed` through the deploy hook to IndexNow, so search
+ * engines refetch them now rather than at their next crawl. A removed page
+ * should answer 410 (or stay up with availability SoldOut) before this is
+ * called: IndexNow only asks the engines to look again. Nothing is sent when
+ * both lists are empty.
+ */
+export async function urlsChanged(
+  hookUrl: string,
+  changes: { changed?: string[]; removed?: string[] },
+  options: Omit<Parameters<typeof notifyDeploy>[1], "urls"> = {},
+): Promise<DeployNotification> {
+  const urls = [...new Set([...(changes.changed ?? []), ...(changes.removed ?? [])])];
+  if (urls.length === 0) return { submitted: 0 };
+  return notifyDeploy(hookUrl, { source: "urls-changed", ...options, urls });
+}
+
+/**
  * Waits until `url` answers 200 (and, with `header`, carries that header with
  * that value, such as the version just deployed), polling every few seconds up
  * to `timeoutMs`. A deploy script calls it before notifyDeploy, so IndexNow is

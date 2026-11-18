@@ -25,9 +25,9 @@ https://seolyticize.com/.well-known/processor.json.
 `data-site-key`), not the internal `site_…` id in crawl ids.
 
 **Version.** Every request (the tag, the server collector, the deploy bin) names
-this package and version (`X-Seolyticize-Client: next/0.4.5`, or `data-client`
+this package and version (`X-Seolyticize-Client: next/<version>`, or `data-client`
 on the tag), so `get_next_steps` shows an `upgrade_client` row when an older
-install is still reporting.
+install is still reporting. What changed in each version: https://seolyticize.com/docs/changelog.
 
 **Consent.** The tag sets nothing on the device and sends from the first page;
 whether your site needs consent for it is your call. Gating it is an extra you
@@ -87,6 +87,11 @@ then calls the hook; if the page never gets there, it skips the call and says so
 `--ref` defaulting to `SOURCE_COMMIT` or `GIT_COMMIT`. A busy hook (503) is
 retried once after its `Retry-After`. It never prints the id, URL or secret.
 `waitForLive(url, {header})` and `notifyDeploy(hookUrl, {...})` do the same from code.
+
+Between deploys, `urlsChanged(hookUrl, {changed, removed}, {secret})` sends pages
+that changed or went away (a listing that sold) to IndexNow through the same hook.
+Make a removed page answer `410`, or keep it with `availability: SoldOut` and
+related items, before you call it.
 
 The answer says what it compared by: `lastmod`, or `new_urls_only` when the
 sitemap has no `<lastmod>` (then only new pages are found). `--verbose` lists

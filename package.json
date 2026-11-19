@@ -44,6 +44,9 @@
     "react": "^19.2.0",
     "@types/react": "^19.2.0"
   },
+  "dependencies": {
+    "@seolyticize/sdk": "^0.5.18"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Seolyticize/next.git"

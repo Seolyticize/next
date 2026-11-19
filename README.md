@@ -34,23 +34,56 @@ whether your site needs consent for it is your call. Gating it is an extra you
 choose, and counts then start only after a grant:
 
 ```tsx
+<Analytics siteKey="…" consent="cookiemunch" />  // follows Cookie Munch's statistics category
 <Analytics siteKey="…" consent="banner-gated" />  // or "gcm": follows Google Consent Mode's analytics_storage
 <Analytics siteKey="…" consent="required" />  // waits for window.seolyticize("consent", true)
 <Analytics siteKey="…" consent={granted} />   // the page already knows: false renders nothing
 ```
 
+`consent="cookiemunch"` reads `window.CookieMunch.consent.statistics` on
+`CookieMunchOnConsentReady` and `CookieMunchOnChange` (`"cookiemunch:<category>"`
+follows another category); with `debug`, the console names the category it is
+waiting for, and says when Cookie Munch is not on the page yet.
 `consent="banner-gated"` works with every banner that sends Google Consent Mode
 (`consentType` follows another storage type; `debug` says on the console why the tag is not sending). Otherwise call
 `seolyticize("consent", true)` / `false` from the banner's own callback.
 Custom events: `window.seolyticize("Signup", { plan: "free" })`.
 
-**CSP:** `nonce={nonce}` puts the nonce on the tag, and the origins come as constants:
+**CSP:** `nonce={nonce}` puts the nonce on the tag; take the origins from
+`cspFor()` rather than typing them, so they follow `baseUrl`:
 
 ```ts
-import { csp } from "@seolyticize/next";
-// csp.tag:        { "script-src": ["https://seolyticize.com"], "connect-src": ["https://seolyticize.com"] }
-// csp.beaconOnly: { "connect-src": ["https://seolyticize.com"] } — events posted from your own code
+import { cspFor } from "@seolyticize/next";
+const { tag, beaconOnly } = cspFor(); // cspFor(baseUrl) for another deployment
+// tag:        { "script-src": ["https://seolyticize.com"], "connect-src": ["https://seolyticize.com"] }
+// beaconOnly: { "connect-src": ["https://seolyticize.com"] } — events posted from your own code
+const scriptSrc = ["'self'", ...tag["script-src"]];
 ```
+
+`csp` is `cspFor()` for seolyticize.com.
+
+**Verification files.** One route serves every file `onboard_site` issued:
+the IndexNow key file, Google's `google….html` and `BingSiteAuth.xml`, read by
+site key from Seolyticize (`/api/verification-files?k=`) and kept five minutes,
+so a re-issued key needs no redeploy:
+
+```ts
+// app/[file]/route.ts
+import { seolyticizeVerificationRoute } from "@seolyticize/next/server";
+export const { GET } = seolyticizeVerificationRoute({ siteKey: "…" });
+```
+
+A root-level dynamic segment answers `/BingSiteAuth.xml`, `/google….html` and
+`/<key>.txt` (other root paths get a plain 404). Next allows one dynamic segment
+per level, so when the app already has `app/[slug]/`, put the same line in static
+folders named after each file instead: `app/BingSiteAuth.xml/route.ts`,
+`app/google….html/route.ts`, `app/<key>.txt/route.ts`. Google's and Bing's
+files are kept when `onboard_site` runs (run it again for a site onboarded
+before 2026-11-19). For the meta-tag proofs, use Next's own
+`metadata.verification: { google: "<token>", other: { "msvalidate.01": "<code>" } }`
+with the tokens from `issue_site_verification {method: "meta"}` and `add_bing_site`.
+
+Only the IndexNow key, without a request to Seolyticize:
 
 ```ts
 // app/<your IndexNow key>.txt/route.ts
@@ -177,6 +210,54 @@ The reference is your own (a cart id, or the order id itself sent as
 `order_id`), so nothing about the visitor travels with it. Orders without one
 are attributed from their own UTM tags and landing page where the store
 recorded them.
+
+## Sign-ups and Stripe purchases, one call each
+
+With `SEOLYTICIZE_SITE_KEY` and `SEOLYTICIZE_SERVER_COLLECT_KEY` set (or
+`siteKey` / `serverKey` passed as options):
+
+```ts
+import { reportSignup } from "@seolyticize/next/server";
+// In the route that creates the account. Resolves with the visit token.
+const visit = await reportSignup(request, { userId: claims.sub });
+```
+
+`reportSignup` reads the visitor's address and user agent from the request and
+the page from its `Referer`, and joins the sign-up to that visitor's visit (or
+credits the page's own `seolyticize("visit")` token, when the page sends it in
+an `X-Seolyticize-Visit` header). There is no Seolyticize cookie to read: the
+tag stores nothing. `userId` is sent only as SHA-256 of `"<siteKey>:<userId>"`
+(the `uid` that links a user's visits and that `forget_user` takes); leave it
+out without the user's consent.
+
+```ts
+// The checkout route: one spread.
+import { seolyticizeCheckoutMetadata, recordStripeEvent } from "@seolyticize/next/server";
+const session = await stripe.checkout.sessions.create({
+  ...params,
+  metadata: { ...(await seolyticizeCheckoutMetadata(request)) }, // { seolyticize_visit: "v1…" }
+});
+
+// The Stripe webhook you already have, after verifying the event:
+await recordStripeEvent(event);
+```
+
+`seolyticizeCheckoutMetadata` reports a `Checkout` event for the visitor and
+puts its visit token in the session's metadata. `recordStripeEvent` records a
+paid `checkout.session.completed` (or `async_payment_succeeded`) as a
+`Purchase`: `amount_total` read in minor units by the currency's own digits
+(JPY 500 is 500, USD 1999 is 19.99), the currency as is, and the session id as
+`orderId`, so a redelivered webhook counts once. Without a token, or with one
+that no longer credits, the purchase is still recorded, unattributed. Refunds
+are not read from Stripe: send a `Refund` event with
+`{ orderId: session.id }` yourself. A Stripe connector that reads Stripe with a stored key is not part
+of this.
+
+**Unattributed events.** An event sent with no `ip`, `userAgent` or visit
+token cannot be joined to a visit. The collector warns once per process, the
+event is stored, and `onError` hears `stored "…" as unattributed
+(no_visitor_context)`. `get_goal_report` counts it in its `(unattributed)`
+row.
 
 ## Conversions after the visit
 

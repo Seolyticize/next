@@ -30,3 +30,14 @@ export type {
 export function createCollector(options: CollectorOptions): Collector {
   return sdkCreateCollector({ client: CLIENT, ...options });
 }
+export {
+  seolyticizeVerificationRoute,
+  type VerificationFile,
+} from "./verificationRoute.js";
+
+export {
+  recordStripeEvent,
+  reportSignup,
+  seolyticizeCheckoutMetadata,
+  type ReportOptions,
+} from "./serverAttribution.js";

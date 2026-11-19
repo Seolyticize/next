@@ -43,13 +43,22 @@ export type AnalyticsProps = {
    * either way (no cookies, no storage), so many sites need none.
    * - "gcm": follows Google Consent Mode's analytics_storage, which most consent
    *   banners send (consentType names another storage type).
+   * - "cookiemunch": follows Cookie Munch's statistics category
+   *   (window.CookieMunch.consent.statistics); "cookiemunch:<category>" another.
    * - "required": sends nothing until window.seolyticize("consent", true), for
    *   any banner: call it from the banner's own callback.
    * - true / false: the page already knows; false renders nothing.
    * - left out or "none": always sends.
    */
-  consent?: boolean | "gcm" | "banner-gated" | "required" | "none";
-  /** With consent="gcm": says on the browser console why the tag is not sending. */
+  consent?:
+    | boolean
+    | "gcm"
+    | "banner-gated"
+    | "cookiemunch"
+    | `cookiemunch:${string}`
+    | "required"
+    | "none";
+  /** Says on the browser console why the tag is not sending, and which consent signal it waits for. */
   debug?: boolean;
   /** The Consent Mode storage type to follow with consent="gcm" (default analytics_storage). */
   consentType?: string;
@@ -79,7 +88,10 @@ export function Analytics({
   // No key (an env var the build did not see) loads nothing, rather than a tag that sends nothing.
   if (consent === false || !siteKey) return null;
   const gated = consent === "gcm" || consent === "banner-gated";
-  const waits = consent === "required" || gated;
+  const waits =
+    consent === "required" ||
+    gated ||
+    (typeof consent === "string" && consent.startsWith("cookiemunch"));
   return createElement("script", {
     defer: true,
     src: `${baseUrl.replace(/\/$/, "")}/a.js?v=${TAG_VERSION}`,
@@ -290,10 +302,12 @@ export async function verifySite(options: {
       body: JSON.stringify(input),
     });
     const body = (await response.json().catch(() => ({}))) as {
+      ok?: boolean;
       data?: T;
       error?: string;
     };
-    if (!response.ok)
+    // A refusal as data (ok:false) answers 402, 409 or 422; read it as the 200 it used to be.
+    if (!response.ok && body.ok !== false)
       throw new Error(body.error ?? `${tool} answered ${response.status}.`);
     return body.data as T;
   };
